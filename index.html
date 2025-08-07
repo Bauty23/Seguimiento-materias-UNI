@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Seguimiento de Materias — Universidad</title>
+  <style>
+    :root{
+      --bg:#0f1724;
+      --card:#0b1220;
+      --accent:#7dd3fc;
+      --muted:#94a3b8;
+      --success:#34d399;
+      --danger:#fb7185;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#071028 0%,var(--bg) 100%);color:#e6eef8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px}
+
+    .app{width:100%;max-width:960px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:14px}
+
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:20px}
+
+    
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:18px;border-radius:12px;box-shadow:0 6px 24px rgba(2,6,23,0.6)}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    .controls input[type="search"]{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .controls select, .controls button{padding:10px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit;cursor:pointer}
+
+    ul.materias{list-style:none;padding:0;margin:0;max-height:520px;overflow:auto}
+    li.materia{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;margin-bottom:8px;border:1px solid transparent}
+    li.materia[data-aprobada="true"]{background:linear-gradient(90deg, rgba(52,211,153,0.06), rgba(52,211,153,0.02));border-color:rgba(52,211,153,0.08)}
+    .left{display:flex;gap:12px;align-items:center}
+    .materia-nombre{font-weight:600}
+    .meta{font-size:13px;color:var(--muted)}
+    .actions{display:flex;gap:8px;align-items:center}
+    .btn{padding:6px 8px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);cursor:pointer}
+
+    /* Panel derecho */
+    .sidebar .progreso{margin-bottom:14px}
+    .progressbar{height:16px;border-radius:999px;background:rgba(255,255,255,0.04);overflow:hidden}
+    .progressbar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--success));width:0%}
+    .stats{display:flex;gap:12px;justify-content:space-between;margin-bottom:12px}
+    .stat{flex:1;background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;text-align:center}
+    .stat strong{display:block;font-size:20px}
+
+    form.add{display:flex;gap:8px}
+    form.add input, form.add select{flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    form.add button{padding:10px 12px;border-radius:8px;border:0;background:var(--accent);color:#042029;font-weight:600;cursor:pointer}
+
+    footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+
+    @media (max-width:880px){
+      .grid{grid-template-columns:1fr;}
+      .sidebar{order:-1}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>Seguimiento de materias</h1>
+        <p class="lead">Marca las materias aprobadas y haz seguimiento de lo que te queda.</p>
+      </div>
+      <div class="meta">Universidad • <small id="fecha">--</small></div>
+    </header>
+
+    <div class="grid">
+      <main>
+        <section class="card">
+          <div class="controls">
+            <input id="search" type="search" placeholder="Buscar materia (ej: Matemáticas)" />
+            <select id="filter">
+              <option value="all">Todas</option>
+              <option value="pendientes">Pendientes</option>
+              <option value="aprobadas">Aprobadas</option>
+            </select>
+            <button id="reset" title="Restablecer datos">Restablecer</button>
+          </div>
+
+          <ul class="materias" id="lista">
+            <!-- Items generados por JS -->
+          </ul>
+
+          <footer>
+            <small>Tip: Haz clic en el icono ✓ para marcar una materia como aprobada. Los cambios se guardan en tu navegador.</small>
+          </footer>
+        </section>
+      </main>
+
+      <aside class="sidebar">
+        <div class="card">
+          <div class="progreso">
+            <label>Progreso</label>
+            <div class="progressbar" aria-hidden="true"><i id="barra"></i></div>
+            <div style="text-align:right;margin-top:6px;font-size:13px;color:var(--muted)"><span id="porc">0%</span> completado</div>
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <small>Total</small>
+              <strong id="total">0</strong>
+            </div>
+            <div class="stat">
+              <small>Aprobadas</small>
+              <strong id="aprobadas">0</strong>
+            </div>
+            <div class="stat">
+              <small>Pendientes</small>
+              <strong id="pendientes">0</strong>
+            </div>
+          </div>
+
+          <form class="add" id="formAdd">
+            <input id="nueva" placeholder="Nueva materia (ej: Física II)" required />
+            <select id="cupo">
+              <option value="obligatoria">Obligatoria</option>
+              <option value="optativa">Optativa</option>
+            </select>
+            <button type="submit">Añadir</button>
+          </form>
+
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    // Datos por defecto (puedes editarlos)
+    const ejemplo = [
+      {id:1,nombre:'Matemáticas I',anio:1,categoria:'obligatoria',aprobada:false},
+      {id:2,nombre:'Física I',anio:1,categoria:'obligatoria',aprobada:true},
+      {id:3,nombre:'Química General',anio:1,categoria:'optativa',aprobada:false},
+      {id:4,nombre:'Programación I',anio:1,categoria:'obligatoria',aprobada:true},
+      {id:5,nombre:'Estadística',anio:2,categoria:'obligatoria',aprobada:false}
+    ];
+
+    // Elementos
+    const lista = document.getElementById('lista');
+    const totalEl = document.getElementById('total');
+    const aprobadasEl = document.getElementById('aprobadas');
+    const pendientesEl = document.getElementById('pendientes');
+    const barra = document.getElementById('barra');
+    const porc = document.getElementById('porc');
+    const search = document.getElementById('search');
+    const filter = document.getElementById('filter');
+    const formAdd = document.getElementById('formAdd');
+    const nueva = document.getElementById('nueva');
+    const cupo = document.getElementById('cupo');
+    const resetBtn = document.getElementById('reset');
+    const fecha = document.getElementById('fecha');
+
+    // Fecha
+    fecha.textContent = new Date().toLocaleDateString('es-AR', {year:'numeric',month:'short',day:'numeric'});
+
+    // Cargar / Guardar
+    function cargar(){
+      const raw = localStorage.getItem('materias_v1');
+      if(raw){
+        try{return JSON.parse(raw)}catch(e){return ejemplo}
+      }
+      return ejemplo;
+    }
+    function guardar(){
+      localStorage.setItem('materias_v1', JSON.stringify(state));
+    }
+
+    let state = cargar();
+
+    // Render
+    function render(){
+      lista.innerHTML = '';
+      const q = search.value.trim().toLowerCase();
+      const f = filter.value;
+
+      const visibles = state.filter(m => {
+        if(f==='aprobadas' && !m.aprobada) return false;
+        if(f==='pendientes' && m.aprobada) return false;
+        if(q && !m.nombre.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      visibles.forEach(m => {
+        const li = document.createElement('li');
+        li.className = 'materia';
+        li.dataset.aprobada = m.aprobada;
+
+        li.innerHTML = `
+          <div class="left">
+            <button class="btn toggle" title="Marcar como ${m.aprobada? 'pendiente':'aprobada'}">${m.aprobada? '↺':'✓'}</button>
+            <div>
+              <div class="materia-nombre">${escapeHtml(m.nombre)}</div>
+              <div class="meta">Año ${m.anio} • ${m.categoria}</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="btn edit" title="Editar">✎</button>
+            <button class="btn del" title="Eliminar">🗑</button>
+          </div>
+        `;
+
+        // Handlers
+        li.querySelector('.toggle').addEventListener('click', ()=>{
+          m.aprobada = !m.aprobada; guardar(); render();
+        });
+        li.querySelector('.del').addEventListener('click', ()=>{
+          if(confirm(`Eliminar "${m.nombre}"?`)){
+            state = state.filter(x=>x.id!==m.id); guardar(); render();
+          }
+        });
+        li.querySelector('.edit').addEventListener('click', ()=>{
+          const nuevo = prompt('Editar nombre de la materia', m.nombre);
+          if(nuevo!==null && nuevo.trim()!==''){
+            m.nombre = nuevo.trim(); guardar(); render();
+          }
+        });
+
+        lista.appendChild(li);
+      });
+
+      // Estadísticas
+      const tot = state.length;
+      const apr = state.filter(x=>x.aprobada).length;
+      const pen = tot - apr;
+      totalEl.textContent = tot;
+      aprobadasEl.textContent = apr;
+      pendientesEl.textContent = pen;
+      const pct = tot? Math.round((apr/tot)*100) : 0;
+      barra.style.width = pct + '%';
+      porc.textContent = pct + '%';
+    }
+
+    // Añadir
+    formAdd.addEventListener('submit', e=>{
+      e.preventDefault();
+      const nombre = nueva.value.trim();
+      if(!nombre) return;
+      const id = Date.now();
+      state.push({id,nombre,anio:1,categoria:cupo.value,aprobada:false});
+      nueva.value=''; guardar(); render();
+    });
+
+    // Búsqueda / filtro
+    search.addEventListener('input', render);
+    filter.addEventListener('change', render);
+
+    // Reset
+    resetBtn.addEventListener('click', ()=>{
+      if(confirm('Restablecer a los datos de ejemplo y borrar lo guardado?')){
+        state = ejemplo.slice(); guardar(); render();
+      }
+    });
+
+    // Escape para seguridad mínima
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, function(s){
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[s];
+      });
+    }
+
+    // Inicial
+    render();
+  </script>
+</body>
+</html>
